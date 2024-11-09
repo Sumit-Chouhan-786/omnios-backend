@@ -73,7 +73,8 @@ app.post("/login", async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (user.password !== password) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
     }
     const token = jwt.sign(
@@ -87,6 +88,7 @@ app.post("/login", async (req, res) => {
     res.json({
       message: "Login successful",
       user: { username: user.username, email: user.email },
+      token, 
     });
   } catch (error) {
     console.error(error);
@@ -95,6 +97,7 @@ app.post("/login", async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 });
+
 
 // This is my Logout Route
 app.post("/logout", (req, res) => {
