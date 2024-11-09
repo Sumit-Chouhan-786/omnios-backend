@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -18,17 +19,14 @@ mongoose
     console.error("Failed to connect to MongoDB", err);
   });
 
-// my User Schema
+// User Schema
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
 });
 
-const User = mongoose.model("User", userSchema);
-
-// password hashed
-
+// Password hashing before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -43,7 +41,9 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-//  This is my Signup Route
+const User = mongoose.model("User", userSchema);
+
+// Signup Route
 app.post("/signup", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -65,7 +65,7 @@ app.post("/signup", async (req, res) => {
   }
 });
 
-// This is my Login Route
+// Login Route
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -73,10 +73,12 @@ app.post("/login", async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid password" });
+
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({ message: "Password not matched" });
     }
+
     const token = jwt.sign(
       {
         _id: user._id,
@@ -85,10 +87,10 @@ app.post("/login", async (req, res) => {
       process.env.secret_key,
       { expiresIn: "7D" }
     );
+
     res.json({
       message: "Login successful",
       user: { username: user.username, email: user.email },
-      token, 
     });
   } catch (error) {
     console.error(error);
@@ -98,8 +100,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
-// This is my Logout Route
+// Logout Route
 app.post("/logout", (req, res) => {
   res.json({ message: "Logged out successfully" });
 });
